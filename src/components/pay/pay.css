@@ -1,0 +1,17 @@
+/* 通用支付页样式 */
+.pay-page{background:#f8fafc;min-height:100vh}
+.container{margin-top:60px;max-width:900px;margin-inline:auto;padding:24px 20px 40px}
+.hero{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.content{margin-top:16px;background:#fff;border-radius:12px;box-shadow:0 8px 22px rgba(0,0,0,.06);padding:20px;display:grid;gap:16px}
+.order{display:flex;justify-content:space-between;align-items:center;color:#111827}
+.amount{color:#16a34a}
+.qr-box{display:grid;justify-items:center;gap:10px}
+.qr-box img{width:220px;height:220px;border-radius:12px;background:#f3f4f6}
+.tip{color:#64748b}
+.refresh{height:36px;padding:0 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#111827;font-weight:700;cursor:pointer}
+.refresh:hover{filter:brightness(0.97)}
+.done{height:40px;padding:0 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:800;cursor:pointer}
+.back{color:#2563eb;text-decoration:none}
+.pay-page.alipay .hero{background:linear-gradient(135deg,#1677ff,#3b82f6)}
+.pay-page.wechat .hero{background:linear-gradient(135deg,#10b981,#22c55e)}
+.pay-page.card .hero{background:linear-gradient(135deg,#111827,#374151)} 
