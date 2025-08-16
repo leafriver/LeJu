@@ -76,23 +76,23 @@ const handleLogin = async () => {
   }
 
   isLoading.value = true;
-  setTimeout(() => {
+  
+  try {
+    const result = await userStore.login(loginForm.username, loginForm.password);
+    
+    if (result.success) {
+      // 登录成功，跳转到首页
+      router.push("/");
+    } else {
+      // 登录失败，显示错误信息
+      alert(result.message);
+    }
+  } catch (error) {
+    console.error("登录失败:", error);
+    alert("登录失败，请稍后重试");
+  } finally {
     isLoading.value = false;
-    console.log("登录信息:", loginForm);
-    
-    // 模拟登录成功，保存用户信息
-    const userData = {
-      id: Date.now().toString(),
-      username: loginForm.username,
-      email: `${loginForm.username}@example.com`,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${loginForm.username}`
-    };
-    
-    // 保存用户状态
-    userStore.login(userData);
-    
-    router.push("/");
-  }, 1500);
+  }
 };
 </script>
 
@@ -312,3 +312,4 @@ const handleLogin = async () => {
   }
 }
 </style>
+ 

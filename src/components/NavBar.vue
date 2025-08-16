@@ -2,21 +2,30 @@
   <div class="nav-home">
     <div class="left">
       <router-link to="/" class="logo-link">
-        <p>嗨，欢迎来到乐居商城</p>
+      <p>嗨，欢迎来到乐居商城</p>
       </router-link>
     </div>
     <div class="right">
-      <router-link to="/cart" class="nav-link">
-        <p>我的购物车 <span v-if="cartCount" class="cart-badge">{{ cartCount }}</span></p>
+      <router-link to="/" class="nav-link">
+        <p>首页</p>
       </router-link>
+      <router-link to="/activities" class="nav-link">
+        <p>活动中心</p>
+      </router-link>
+      <router-link to="/analytics" class="nav-link">
+        <p>数据分析</p>
+      </router-link>
+      <div class="nav-link" @click="handleCartClick" style="cursor: pointer;">
+        <p>我的购物车 <span v-if="cartCount" class="cart-badge">{{ cartCount }}</span></p>
+      </div>
       
       <!-- 未登录状态 -->
       <template v-if="!userStore.isLoggedIn.value">
         <router-link to="/login" class="nav-link">
-          <p>登录</p>
+      <p>登录</p>
         </router-link>
         <router-link to="/register" class="nav-link">
-          <p>注册</p>
+      <p>注册</p>
         </router-link>
       </template>
       
@@ -94,6 +103,14 @@ const cancelCloseUserMenu = () => {
     closeTimer = null
   }
   showUserMenu.value = true
+}
+
+const handleCartClick = () => {
+  if (!userStore.checkLoginStatus()) {
+    router.push('/login')
+    return
+  }
+  router.push('/cart')
 }
 
 const handleLogout = () => {

@@ -33,6 +33,8 @@ const routes = [
   { path: '/security', name: 'Security', component: () => import('../components/SecurityPage.vue') },
   { path: '/payment', name: 'Payment', component: () => import('../components/PaymentPage.vue') },
   { path: '/promotions', name: 'Promotions', component: () => import('../components/PromotionsPage.vue') },
+  { path: '/activities', name: 'Activities', component: () => import('../components/ActivitiesPage.vue') },
+  { path: '/analytics', name: 'Analytics', component: () => import('../components/AnalyticsPage.vue') },
   {
     path: '/profile',
     name: 'Profile',
@@ -43,9 +45,9 @@ const routes = [
   { path: '/careers', name: 'Careers', component: CareersPage },
   { path: '/contact', name: 'Contact', component: ContactPage },
   { path: '/press', name: 'Press', component: PressPage },
-  { path: '/cart', name: 'Cart', component: () => import('../components/CartPage.vue') },
-  { path: '/checkout', name: 'Checkout', component: () => import('../components/CheckoutPage.vue') },
-  { path: '/product/:id', name: 'ProductDetail', component: () => import('../components/ProductDetailPage.vue') },
+  { path: '/cart', name: 'Cart', component: () => import('../components/CartPage.vue'), meta: { requiresAuth: true } },
+  { path: '/checkout', name: 'Checkout', component: () => import('../components/CheckoutPage.vue'), meta: { requiresAuth: true } },
+  { path: '/product/:id', name: 'ProductDetail', component: () => import('../components/ProductDetailPage.vue'), meta: { requiresAuth: true } },
   { path: '/pay/alipay', name: 'PayAlipay', component: () => import('../components/pay/PayAlipay.vue') },
   { path: '/pay/wechat', name: 'PayWeChat', component: () => import('../components/pay/PayWeChat.vue') },
   { path: '/pay/card', name: 'PayCard', component: () => import('../components/pay/PayCard.vue') }

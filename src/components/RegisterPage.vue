@@ -127,6 +127,7 @@
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import MessageModal from "./MessageModal.vue";
+import userStore from "../stores/userStore";
 
 const router = useRouter();
 
@@ -223,15 +224,27 @@ const handleRegister = async () => {
 
   isLoading.value = true;
   
-  // 模拟注册请求
-  setTimeout(() => {
+  try {
+    const result = await userStore.register({
+      username: registerForm.username,
+      password: registerForm.password,
+      email: registerForm.email
+    });
+    
+    if (result.success) {
+      showMessage('success', '注册成功', '注册成功！请登录您的账号');
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+    } else {
+      showMessage('error', '注册失败', result.message);
+    }
+  } catch (error) {
+    console.error("注册失败:", error);
+    showMessage('error', '注册失败', '注册失败，请稍后重试');
+  } finally {
     isLoading.value = false;
-    console.log("注册信息:", registerForm);
-    showMessage('success', '注册成功', '注册成功！请登录您的账号');
-    setTimeout(() => {
-      router.push("/login");
-    }, 2000);
-  }, 1500);
+  }
 };
 </script>
 

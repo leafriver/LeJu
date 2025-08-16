@@ -21,7 +21,7 @@
               v-for="c in hotCategories"
               :key="c"
               class="chip"
-              @click="selectCategory(c)"
+              @click="handleHotCategory(c)"
             >{{ c }}</button>
           </div>
         </div>
@@ -46,18 +46,18 @@
               @click="selectCategory(null)"
             >全部</li>
             <li
-              v-for="cat in categories"
-              :key="cat"
-              :class="{ active: selectedCategory === cat }"
-              @click="selectCategory(cat)"
-            >{{ cat }}</li>
+              v-for="cat in topCategories"
+              :key="cat.id"
+              :class="{ active: selectedCategory === cat.id }"
+              @click="selectCategory(cat.id)"
+            >{{ cat.name }}</li>
           </ul>
         </aside>
 
         <div class="product-area">
           <div class="toolbar">
             <div class="breadcrumbs">
-              分类：<strong>{{ selectedCategory || '全部' }}</strong>
+              分类：<strong>{{ selectedCategory ? getCategoryName(selectedCategory) : '全部' }}</strong>
               <span v-if="keyword">｜关键词：<strong>{{ keyword }}</strong></span>
             </div>
             <div class="sort">
@@ -71,7 +71,20 @@
             </div>
           </div>
 
-          <div class="product-grid">
+          <!-- 加载状态 -->
+          <div v-if="loading" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>正在加载商品...</p>
+          </div>
+
+          <!-- 错误状态 -->
+          <div v-else-if="error" class="error-state">
+            <p class="error-message">{{ error }}</p>
+            <button @click="catalog.initialize()" class="retry-btn">重试</button>
+          </div>
+
+          <!-- 商品网格 -->
+          <div v-else class="product-grid">
             <article v-for="p in pagedProducts" :key="p.id" class="product-card">
               <div class="thumb" @click="goDetail(p.id)" style="cursor:pointer">
                 <img :src="p.image" :alt="p.title" loading="lazy" @error="onImgError($event, p)" />
@@ -104,36 +117,40 @@
       <!-- 页脚 -->
       <SiteFooter />
     </main>
+    
+
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from './NavBar.vue'
 import SiteFooter from './SiteFooter.vue'
 import catalog, { type Product } from '../stores/catalogStore'
+import userStore from '../stores/userStore'
 
-// 示例分类与热词
-const categories = [
-  '数码家电', '家居生活', '美妆个护', '运动户外', '食品饮料', '服饰鞋包', '母婴玩具', '宠物用品'
-]
+// 热词
 const hotCategories = ['爆款', '新品', '清仓', '199包邮']
 
-// 示例商品采用 catalogStore 的类型与数据
 const router = useRouter()
 
-// 使用 catalogStore 的数据（避免与详情数据不一致）
+// 使用 catalogStore 的数据
 const products = catalog.products
-
+const categories = catalog.categories
+const topCategories = catalog.topCategories
+const loading = catalog.loading
+const error = catalog.error
 
 const keyword = ref('')
-const selectedCategory = ref<string | null>(null)
+const selectedCategory = ref<number | null>(null)
 const sortBy = ref<'popular' | 'price-asc' | 'price-desc' | 'new'>('popular')
+
+
 
 const filteredProducts = computed(() => {
   let list = products.value.filter(p => {
-    const matchCat = selectedCategory.value ? p.category === selectedCategory.value : true
+    const matchCat = selectedCategory.value ? p.category === getCategoryName(selectedCategory.value) : true
     const matchKw = keyword.value ? (p.title.includes(keyword.value)) : true
     return matchCat && matchKw
   })
@@ -162,24 +179,75 @@ const pagedProducts = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredProducts.value.slice(start, start + pageSize)
 })
-watch([keyword, selectedCategory, sortBy], () => { currentPage.value = 1 })
 
-function selectCategory(cat: string | null) {
-  selectedCategory.value = cat
+// 监听筛选条件变化，重置分页
+watch([keyword, selectedCategory, sortBy], () => { 
+  currentPage.value = 1 
+})
+
+// 获取分类名称
+function getCategoryName(categoryId: number): string {
+  const category = categories.value.find(cat => cat.id === categoryId)
+  return category ? category.name : '未分类'
 }
-function doSearch() {
-  // 这里可发起请求；当前使用前端筛选
+
+// 选择分类
+async function selectCategory(categoryId: number | null) {
+  selectedCategory.value = categoryId
+  currentPage.value = 1
+  
+  if (categoryId) {
+    await catalog.fetchProductsByCategory(categoryId)
+  } else {
+    await catalog.fetchProducts()
+  }
 }
+
+// 搜索
+async function doSearch() {
+  if (keyword.value.trim()) {
+    await catalog.searchProducts(keyword.value.trim())
+  } else {
+    await catalog.fetchProducts()
+  }
+  currentPage.value = 1
+}
+
+// 处理热词点击
+function handleHotCategory(category: string) {
+  // 根据热词设置搜索关键词
+  keyword.value = category
+  doSearch()
+}
+
+// 添加到购物车
 import cartStore from '../stores/cartStore'
 function addToCart(p: Product) {
+  if (!userStore.checkLoginStatus()) {
+    router.push('/login')
+    return
+  }
   cartStore.addItem({ id: p.id, title: p.title, price: p.price, image: p.image }, 1)
 }
+
+// 图片加载错误处理
 function onImgError(e: Event, p: Product) {
   (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${encodeURIComponent(p.id)}/600/400`
 }
+
+// 跳转到商品详情
 function goDetail(id: string){
+  if (!userStore.checkLoginStatus()) {
+    router.push('/login')
+    return
+  }
   router.push(`/product/${id}`)
 }
+
+// 组件挂载时初始化数据
+onMounted(async () => {
+  await catalog.initialize()
+})
 </script>
 
 <style scoped>
@@ -240,19 +308,157 @@ function goDetail(id: string){
 .breadcrumbs { color: #6b7280; }
 .sort select { height: 36px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 0 10px; }
 
-.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.product-card { background: #fff; border-radius: 12px; box-shadow: 0 8px 22px rgba(0,0,0,.08); overflow: hidden; display: flex; flex-direction: column; }
-.thumb { position: relative; aspect-ratio: 4 / 3; background: #f3f4f6; }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 加载状态 */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 错误状态 */
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #ef4444;
+}
+
+.error-message {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background: #2563eb;
+}
+
+.product-grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 24px; 
+  margin-top: 24px;
+}
+
+.product-card { 
+  background: #fff; 
+  border-radius: 12px; 
+  box-shadow: 0 8px 22px rgba(0,0,0,.08); 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
+  height: 420px; /* 固定卡片高度 */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0,0,0,.12);
+}
+
+.thumb { 
+  position: relative; 
+  width: 100%;
+  height: 200px; /* 固定图片高度 */
+  background: #f3f4f6; 
+  overflow: hidden;
+}
+
+.thumb img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .thumb img {
+  transform: scale(1.05);
+}
 .tag { position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; }
 .tag-sale { background: #fee2e2; color: #b91c1c; }
-.title { margin: 10px 12px 0; font-size: 14px; color: #111827; line-height: 1.5; height: 42px; overflow: hidden; }
-.meta { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; }
-.price .current { color: #111827; font-weight: 800; }
-.price .orig { color: #9ca3af; text-decoration: line-through; margin-left: 8px; font-size: 12px; }
-.rating { color: #f59e0b; font-weight: 700; }
-.add-btn { margin: 8px 12px 12px; height: 38px; border: none; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; font-weight: 700; cursor: pointer; }
-.add-btn:hover { filter: brightness(1.05); }
+.title { 
+  margin: 16px 16px 8px; 
+  font-size: 16px; 
+  color: #111827; 
+  line-height: 1.4; 
+  height: 44px; 
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-weight: 600;
+}
+
+.meta { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 12px 16px; 
+  margin-top: auto; /* 推到底部 */
+}
+
+.price .current { 
+  color: #ef4444; 
+  font-weight: 800; 
+  font-size: 18px;
+}
+
+.price .orig { 
+  color: #9ca3af; 
+  text-decoration: line-through; 
+  margin-left: 8px; 
+  font-size: 14px; 
+}
+
+.rating { 
+  color: #f59e0b; 
+  font-weight: 700; 
+  font-size: 14px;
+}
+
+.add-btn { 
+  margin: 0 16px 16px; 
+  height: 44px; 
+  border: none; 
+  border-radius: 12px; 
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+  color: #fff; 
+  font-weight: 700; 
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.add-btn:hover { 
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
 
 .pager{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin:18px 0}
 .page-info{color:#6b7280;margin-right:8px}
@@ -262,10 +468,29 @@ function goDetail(id: string){
 
 @media (max-width: 1024px) {
   .hero { grid-template-columns: 1fr; }
+  .product-grid { 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 20px; 
+  }
 }
+
 @media (max-width: 768px) {
   .promo-strip { grid-template-columns: repeat(2, 1fr); }
   .catalog { grid-template-columns: 1fr; }
   .category-nav { position: static; }
+  .product-grid { 
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 16px; 
+  }
+  .product-card { height: 380px; }
+  .thumb { height: 160px; }
+}
+
+@media (max-width: 480px) {
+  .product-grid { 
+    grid-template-columns: 1fr; 
+    gap: 16px; 
+  }
+  .product-card { height: auto; min-height: 360px; }
 }
 </style> 

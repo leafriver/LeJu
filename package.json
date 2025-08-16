@@ -11,9 +11,12 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "server": "node server/app.js",
+    "loadtest": "node server/loadtest.js --n 2000 --c 300 --product 1 --limit 999 --init 50"
   },
   "dependencies": {
+    "pinia": "^3.0.3",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
